@@ -1,0 +1,5 @@
+---
+title: "About"
+---
+
+My name is Luke Maloney, I'm from Southern California and I'm currently studying Computer Science at Chico State.

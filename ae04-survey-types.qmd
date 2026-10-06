@@ -1,0 +1,218 @@
+---
+title: "AE04 - Getting to Know Your Data Types"
+author: "Luke Maloney"
+date: "2026-09-24"
+format: html
+execute:
+  warning: false
+  message: false
+---
+
+## Setup
+
+```{r}
+#| label: packages
+library(tidyverse)
+library(googlesheets4)
+```
+
+
+## Step 1: Import
+
+```{r}
+#| label: import
+
+raw <- read_sheet("https://docs.google.com/spreadsheets/d/1e8XSidxeT3SIE10g1jiEuALRa7REpmYU64_3V3TNKKs/edit?usp=sharing") %>%
+  rename(
+    timestamp       = Timestamp,
+    zipcode         = `What is the zipcode of your hometown?`,
+    stats_before    = `Have you taken any statistics courses before?`,
+    prog_experience = `How much experience do you have with programming?`,
+    languages       = `If you've programmed before, which languages have you used, and how comfortable do you feel with each? If you haven't programmed before, please leave this question blank.`,
+    data_interest   = `What types of data interest you?`,
+    learn_best      = `How do you learn best?`,
+    commute_min     = `How long does it take you to commute from home to this classroom, in minutes? Please enter a number only.`
+  )
+```
+
+## Step 2: Data type audit
+
+#### _"How long does it take you to commute from home to this classroom, in minutes? Please enter a number only."_
+
+```{r}
+#| label: type-check-commute
+
+#raw$commute_min
+typeof(raw$commute_min)
+class(raw$commute_min)
+```
+
+Is that what you'd expect, given the question?
+
+Since the question says "Please enter a number only," I expected it to be numeric instead of a list.
+
+```{r}
+#| label: commute-mean-broken
+
+mean(raw$commute_min)
+```
+
+What's going on? `unlist()` this variable and look at the `unique()` values.
+
+One of the values is '"forever"', which is a `r typeof("forever")` type, so I think any values with the "double" type in the list get converted to the "character" type.
+
+```{r}
+#| label: commute-unique
+
+unique(unlist(raw$commute_min))
+
+typeof(10)
+typeof("forever")
+```
+
+#### _"How much experience do you have with programming?"_
+
+```{r}
+#| label: type-check-prog
+
+unique(unlist(raw$prog_experience))
+
+typeof(raw$prog_experience)
+class(raw$prog_experience)
+```
+
+Is this variable ordinal? Does everything you'd expect to see actually show up?
+
+No, right now the R class is "character," but it should be ordinal because "A lot" > "Some" > "None". No, the "A little" option is missing. There should be four options "A lot" > "Some" > "A little" > "None".
+
+#### Skim the rest
+
+```{r}
+#| label: skim-rest
+
+print("timestamp")
+unique(unlist(raw$timestamp))
+typeof(raw$timestamp)
+class(raw$timestamp)
+
+print("zipcode")
+unique(unlist(raw$zipcode))
+typeof(raw$zipcode)
+class(raw$zipcode)
+
+print("stats_before")
+unique(unlist(raw$stats_before))
+typeof(raw$stats_before)
+class(raw$stats_before)
+
+print("languages")
+unique(unlist(raw$languages))
+typeof(raw$languages)
+class(raw$languages)
+
+print("data_interest")
+unique(unlist(raw$data_interest))
+typeof(raw$data_interest)
+class(raw$data_interest)
+
+print("learn_best")
+unique(unlist(raw$learn_best))
+typeof(raw$learn_best)
+class(raw$learn_best)
+```
+
+For each of the other variables — is R's type what you'd expect, given the question that was asked? We won't work with them further in this AE, but you should still be able to answer this for each one.
+
+The R type for most of the other variables are what I'd expect. The one exception is zipcode which is of type "double" and class "numeric", but it should be of type/class "character". The other variables are as expected. For timestamp, the R type is "double" and class is "Date," which is expected. For stats_before, languages, data_interest, and learn_best, the R type/class is "character," which is also expected.
+
+## Step 3: Apply fixes
+
+#### Commute time
+
+While we could try to coerce list → character → numeric, it's easier here to specify data types on read.
+
+```{r}
+#| label: readsurvey-specify-coltypes
+
+# add code here -- copy from the first read_sheet chunk and add to it. Don't try to retype
+raw <- read_sheet("https://docs.google.com/spreadsheets/d/1e8XSidxeT3SIE10g1jiEuALRa7REpmYU64_3V3TNKKs/edit?usp=sharing",
+                  col_types = c("Dccccccn")) %>%
+  rename(
+    timestamp       = Timestamp,
+    zipcode         = `What is the zipcode of your hometown?`,
+    stats_before    = `Have you taken any statistics courses before?`,
+    prog_experience = `How much experience do you have with programming?`,
+    languages       = `If you've programmed before, which languages have you used, and how comfortable do you feel with each? If you haven't programmed before, please leave this question blank.`,
+    data_interest   = `What types of data interest you?`,
+    learn_best      = `How do you learn best?`,
+    commute_min     = `How long does it take you to commute from home to this classroom, in minutes? Please enter a number only.`
+  )
+```
+
+Always keep an eye out for this, and ask yourself whether it's expected, given what you found in Step 2.
+
+Yes, this is expected because the value of "forever" was replaced with NA since we defined the column type as numeric. 
+
+```{r}
+#| label: commute-values
+
+unique(unlist(raw$commute_min))
+typeof(raw$commute_min)
+class(raw$commute_min)
+```
+
+#### Recode & reorder `prog_experience`
+
+1. First, confirm what's actually in the data.
+
+```{r}
+#| label: prog-distinct
+
+unique(unlist(raw$prog_experience))
+```
+
+2. Then compare against the published [survey](https://forms.gle/ktGiD3R4dGNabASx7). Is everything you'd expect to see actually there?
+
+> No, we are missing the "A little — I’ve written a few lines or done small exercises" option.
+
+
+3. Convert the variable to a factor with the current recorded levels.
+
+```{r}
+#| label: prog-recode
+
+raw <- raw %>%
+  mutate(prog_experience = fct_relevel(prog_experience, 
+                                       "None", 
+                                       "Some — I’ve worked on a few projects or used it occasionally", 
+                                       "A lot — I use programming regularly and feel confident writing code"))
+
+levels(raw$prog_experience)
+```
+
+4. Now that it's reading as a factor, use `fct_expand()` to add any level that's missing.
+
+```{r}
+#| label: prog-expand
+
+raw <- raw %>%
+  mutate(prog_experience = fct_expand(prog_experience, 
+                                       "A little — I’ve written a few lines or done small exercises", after = 1))
+
+levels(raw$prog_experience)
+```
+
+5. Last, respect the ordinal nature of this variable by putting the levels in increasing order.
+
+```{r}
+#| label: prog-relevel
+
+raw <- raw %>%
+  mutate(prog_experience = fct_relevel(prog_experience, 
+                                       "None", 
+                                       "A little — I’ve written a few lines or done small exercises",
+                                       "Some — I’ve worked on a few projects or used it occasionally", 
+                                       "A lot — I use programming regularly and feel confident writing code"))
+
+levels(raw$prog_experience)
+```

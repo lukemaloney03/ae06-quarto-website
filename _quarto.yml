@@ -1,0 +1,35 @@
+project:
+  type: website
+
+website:
+  title: "Luke Maloney - CSCI 385"
+  navbar:
+    left:
+      - href: index.qmd
+        text: Home
+      - about.qmd
+      #- text: "Assignments"
+      #  menu:
+      #    - href: ae04-survey-types.qmd
+      #      text: AE 04 - Getting to Know Your Data Types
+  sidebar:
+    style: "docked"
+    search: true
+    contents:
+      #- index.qmd
+      #- about.qmd
+      - section: "Assignments"
+        contents:
+          - ae04-survey-types.qmd
+    
+
+format:
+  html:
+    theme:
+      - darkly
+      - brand
+    css: styles.css
+    toc: true
+
+
+

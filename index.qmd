@@ -1,0 +1,9 @@
+---
+title: "ae06-quarto-website"
+---
+
+The website example I liked was "Ibis Documentation": <https://ibis-project.org/>
+
+[Ibis Project](https://ibis-project.org/)
+
+You could use this to provide documentation of a tool you built.
